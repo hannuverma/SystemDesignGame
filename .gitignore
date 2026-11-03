@@ -1,0 +1,9 @@
+# per-session player workspaces
+runs/*
+!runs/.gitkeep
+
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+*.db
