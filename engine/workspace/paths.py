@@ -8,7 +8,7 @@ from pathlib import Path
 
 from engine.errors import PathEscape
 
-def resolve_relative(root: Path, relative: str|Path) -> Path:
+def resolve_inside(root: Path, relative: str|Path) -> Path:
     """Resolve `relative` under `root`, rejecting absolute paths, '..' and escaping symlinks."""
     rel = Path(relative)
     if rel.is_absolute():
