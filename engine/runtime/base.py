@@ -22,7 +22,7 @@ class RunHandle:
     def health_url(self):
         return f"{self.base_url}{self.manifest.health_path}"
 
-class RunTime(Protocol):
+class Runtime(Protocol):
     def start(self, workdir: Path, manifest: CompanyManifest, log_path: Path) -> RunHandle:
         """Launch the company. Raises RuntimeStartError if it cannot be launched at all."""
 

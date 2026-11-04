@@ -37,8 +37,6 @@ def read_log_trail(path: Path, tail: int) -> list[str]:
 class ProcessRuntime:
 
     def __init__(self, stop_grace_s: float = 3.0) -> None:
-        if os.name != "posix":
-            raise NotImplementedError("ProcessRuntime needs a POSIX system (process groups)")
         self._grace = stop_grace_s
         self._procs: dict[str, subprocess.Popen[bytes]] = {}
 
