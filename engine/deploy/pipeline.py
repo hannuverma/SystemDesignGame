@@ -6,7 +6,6 @@ workspace and the runtime; neither of them knows about the other.
 """
 
 from __future__ import annotations
-from anyio import RunFinishedError
 
 import time
 
@@ -20,14 +19,16 @@ from engine.workspace.models import Session
 
 _Failure = tuple[str, str, list[str]]  # (step, message, log tail)
 
-class Deployer:
 
-    def __init__(self, workspace: WorkspaceManager, runtime: Runtime, settings: Settings):
+class Deployer:
+    def __init__(
+        self, workspace: WorkspaceManager, runtime: Runtime, settings: Settings
+    ):
         self._ws = workspace
         self._runtime = runtime
         self._settings = settings
-        self._handles = dict[str, RunHandle] = {}
-        self._latest = dict[str, DeployResult] = {}
+        self._handles: dict[str, RunHandle] = {}
+        self._latest: dict[str, DeployResult] = {}
 
     # ------------------------------------------------------------ lifecycle
 
@@ -41,31 +42,32 @@ class Deployer:
             return self._handles[session.id]
 
     def shutdown(self, session_id: str) -> None:
-        handle = self._handles[session_id]
+        handle = self._handles.pop(session_id, None)
         if handle is not None:
             self._runtime.stop(handle)
         self._latest.pop(session_id, None)
 
     def shutdown_all(self) -> None:
-        for session_id in list(self._handels):
+        for session_id in list(self._handles):
             self.shutdown(session_id)
 
-    def handle(self, session_id) -> RunHandle:
+    def handle(self, session_id: str) -> RunHandle | None:
         return self._handles.get(session_id)
 
-    def latest(self, session_id) -> RunHandle:
+    def latest(self, session_id: str) -> DeployResult | None:
         return self._latest.get(session_id)
 
-    def logs(self, session_id, tail: int) -> list[str]:
-        handle = self._handles[session_id]
+    def logs(self, session_id: str, tail: int) -> list[str]:
+        handle = self._handles.get(session_id)
         return self._runtime.logs(handle, tail) if handle else []
-
 
     # --------------------------------------------------------------- deploy
 
-    def deploy_stage(self, session: Session, endpoint: str, name: str, new_code: str) -> DeployResult:
+    def deploy_stage(
+        self, session: Session, endpoint: str, name: str, new_code: str
+    ) -> DeployResult:
         started = time.monotonic()
-        while self._ws.lock(session.id):
+        with self._ws.lock(session.id):
             self._ws.get_stage(session, endpoint, name)
             previous = self._ws.head(session)
 
@@ -85,6 +87,7 @@ class Deployer:
                 )
                 self._latest[session.id] = result
                 return result
+
             error = check_syntax(session.manifest.language, new_code)
             if error:
                 return finish("rejected", "validate", error)
@@ -95,16 +98,17 @@ class Deployer:
 
             try:
                 commit = self._ws.commit(session, f"deploy: {name} ({endpoint})")
-
             except GitError as exc:
-                return self._roll_back(session, previous, ("commit", str(exc), []), finish)
+                return self._roll_back(
+                    session, previous, ("commit", str(exc), []), finish
+                )
             failure = self._boot_and_wait(session)
 
             if failure:
                 return self._roll_back(session, previous, failure, finish)
-            return finish("deployed", None, "deployed", commit=commit)\
-    
-    def reset(self, session) -> DeployResult:
+            return finish("deployed", None, "deployed", commit=commit)
+
+    def reset(self, session: Session) -> DeployResult:
         """Throw away all edits: back to the original template, restarted."""
         started = time.monotonic()
         with self._ws.lock(session.id):
@@ -117,53 +121,63 @@ class Deployer:
             else:
                 step, message, tail, status = None, "reset to original", [], "deployed"
             result = DeployResult(
-                    status=status,
-                    step=step,
-                    message=message,
-                    commit=self._ws.head(session),
-                    url=handle.base_url if handle else None,
-                    duration_s=round(time.monotonic() - started, 3),
-                    log_tail=tail or [],
-                )
+                status=status,
+                step=step,
+                message=message,
+                commit=self._ws.head(session),
+                url=handle.base_url if handle else None,
+                duration_s=round(time.monotonic() - started, 3),
+                log_tail=tail or [],
+            )
             self._latest[session.id] = result
             return result
-            
 
     # ------------------------------------------------------------- internals
 
-    def _roll_back(self, session, previous, failure: _Failure, finish) -> DeployResult:
+    def _roll_back(self, session: Session, previous: str, failure: _Failure, finish) -> DeployResult:
         step, message, tail = failure
         try:
             self._ws.reset_to(session, previous)
         except GitError as exc:
-            return finish("broken", "rollback", f"{message}; rollback failed: {exc}", tail)
+            return finish(
+                "broken", "rollback", f"{message}; rollback failed: {exc}", tail
+            )
         second = self._boot_and_wait(session)
         if second:
             _, why, _ = second
             return finish(
-                "broken", "rollback", f"{message}; previous version also failed: {why}", tail
+                "broken",
+                "rollback",
+                f"{message}; previous version also failed: {why}",
+                tail,
             )
         return finish("rolled_back", step, message, tail)
 
-
     def _boot_and_wait(self, session: Session) -> _Failure | None:
-
         try:
             old = self._handles.get(session.id)
             if old is not None:
                 handle = self._runtime.restart(old)
             else:
-                handle = self._runtime.start(session.company_dir, session.manifest, session.log_path)
+                handle = self._runtime.start(
+                    session.company_dir, session.manifest, session.log_path
+                )
         except RuntimeStartError as exc:
             return ("restart", str(exc), exc.log_tail)
         self._handles[session.id] = handle
         ok, reason = self._await_healthy(session, handle)
         if not ok:
-            return ("health", reason, self._runtime.logs(handle, self._settings.log_tail_lines))
+            return (
+                "health",
+                reason,
+                self._runtime.logs(handle, self._settings.log_tail_lines),
+            )
         return None
 
     def _await_healthy(self, session: Session, handle: RunHandle) -> tuple[bool, str]:
-        timeout = min(session.manifest.health_timeout_s, self._settings.max_health_timeout_s)
+        timeout = min(
+            session.manifest.health_timeout_s, self._settings.max_health_timeout_s
+        )
         deadline = time.monotonic() + timeout
         while True:
             if not self._runtime.is_running(handle):

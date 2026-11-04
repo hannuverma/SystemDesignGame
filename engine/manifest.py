@@ -13,8 +13,10 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from engine.errors import ManifestError
 
+ManifestLoadError = ManifestError
+
 MANIFEST_FILENAME = "company.yaml"
-SUPPORTED_LANGUAGES = frozenset({"python"})
+SUPPORTED_LANGUAGES = frozenset({"python", "go"})
 
 
 class CompanyManifest(BaseModel):
@@ -24,7 +26,7 @@ class CompanyManifest(BaseModel):
     language: str
     run: str
     health_path: str = "/health"
-    health_timeout_s: float = Field(default=15.0, gt=0, le=120)
+    health_timeout_s: float = Field(default=10.0, gt=0, le=120)
     source_dirs: list[str] = Field(min_length=1)
 
     @field_validator("language")
@@ -38,52 +40,69 @@ class CompanyManifest(BaseModel):
     @field_validator("run")
     @classmethod
     def _check_run(cls, value: str) -> str:
+        formatter = string.Formatter()
         try:
-            names = [n for _, n, _, _ in string.Formatter().parse(value) if n is not None]
+            fields = {name for _, name, _, _ in formatter.parse(value) if name is not None}
         except ValueError as exc:
-            raise ValueError(f"malformed braces in run command: {exc}") from exc
-        if not names:
-            raise ValueError("run command must contain a {port} placeholder")
-        if any(n != "port" for n in names):
-            raise ValueError("run command may only use the {port} placeholder")
+            raise ValueError(f"malformed format string in 'run': {exc}") from exc
+        if "port" not in fields:
+            raise ValueError("run must contain '{port}' so the engine can choose the port")
+        unknown = fields - {"port"}
+        if unknown:
+            raise ValueError(f"unknown placeholder(s) in 'run': {sorted(unknown)}")
         return value
 
     @field_validator("health_path")
     @classmethod
     def _check_health_path(cls, value: str) -> str:
-        if not value.startswith("/") or any(c in value for c in " \t\r\n?#"):
-            raise ValueError("health_path must start with '/' and contain no spaces, '?' or '#'")
+        if not value.startswith("/"):
+            raise ValueError(f"health_path must start with '/', got {value!r}")
         return value
 
     @field_validator("source_dirs")
     @classmethod
-    def _check_source_dirs(cls, value: list[str]) -> list[str]:
-        for entry in value:
-            path = PurePosixPath(entry)
-            if not entry.strip() or path.is_absolute() or ".." in path.parts:
-                raise ValueError(
-                    f"source_dirs entry {entry!r} must be a relative path inside the company"
-                )
-        return value
+    def _check_source_dirs(cls, dirs: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for d in dirs:
+            p = PurePosixPath(d)
+            if p.is_absolute() or ".." in p.parts:
+                raise ValueError(f"source_dirs entries must be relative, got {d!r}")
+            if p.as_posix() in (".", ""):
+                raise ValueError("cannot use '.' as a source_dir; specify named subdirectories")
+            cleaned.append(p.as_posix())
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError("source_dirs contains duplicates")
+        return cleaned
 
     def format_run(self, port: int) -> str:
         return self.run.format(port=port)
 
 
 def load_manifest(company_dir: Path) -> CompanyManifest:
-    path = company_dir / MANIFEST_FILENAME
+    if company_dir.is_file() or company_dir.suffix in (".yaml", ".yml"):
+        path = company_dir
+        if not path.exists():
+            raise FileNotFoundError(f"{path.name} not found")
+    else:
+        path = company_dir / MANIFEST_FILENAME
+
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise ManifestError(f"{MANIFEST_FILENAME} not found in {company_dir.name}") from exc
-    except (OSError, yaml.YAMLError) as exc:
-        raise ManifestError(f"cannot read {MANIFEST_FILENAME}: {exc}") from exc
+        raise ManifestLoadError(f"{MANIFEST_FILENAME} not found in {company_dir.name}") from exc
+    except yaml.YAMLError as exc:
+        raise ManifestLoadError(f"Invalid YAML in {path.name}: {exc}") from exc
+    except OSError as exc:
+        raise ManifestLoadError(f"cannot read {path.name}: {exc}") from exc
+
     if not isinstance(raw, dict):
-        raise ManifestError(f"{MANIFEST_FILENAME} must contain a mapping at the top level")
+        raise ManifestLoadError(f"{path.name} must contain a mapping at the top level")
+
     try:
         return CompanyManifest.model_validate(raw)
     except ValidationError as exc:
         problems = "; ".join(
-            f"{'.'.join(str(p) for p in e['loc']) or 'manifest'}: {e['msg']}" for e in exc.errors()
+            f"{'.'.join(str(p) for p in e['loc']) or 'manifest'}: {e['msg']}"
+            for e in exc.errors()
         )
-        raise ManifestError(f"invalid {MANIFEST_FILENAME}: {problems}") from exc
+        raise ManifestLoadError(f"validation failed: {problems}") from exc
