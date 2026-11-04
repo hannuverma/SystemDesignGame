@@ -46,7 +46,7 @@ def get_session_history(
     return services.workspace.history(session, limit)
 
 
-@router.delete("/{session_id}/delete")
+@router.delete("/{session_id}", status_code=204)
 def delete_session(session: SessionDep, services: ServicesDep):
     services.deployer.shutdown(session.id)
     services.workspace.delete_session(session.id)

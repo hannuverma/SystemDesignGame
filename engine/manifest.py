@@ -55,8 +55,8 @@ class CompanyManifest(BaseModel):
     @field_validator("health_path")
     @classmethod
     def _check_health_path(cls, value: str) -> str:
-        if not value.startswith("/"):
-            raise ValueError(f"health_path must start with '/', got {value!r}")
+        if not value.startswith("/") or " " in value or "?" in value or "#" in value:
+            raise ValueError(f"health_path must start with '/' and contain no query, fragment, or whitespace, got {value!r}")
         return value
 
     @field_validator("source_dirs")

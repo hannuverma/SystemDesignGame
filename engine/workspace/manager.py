@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
+import stat
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -20,6 +23,25 @@ SESSION_ID_RE = re.compile(r"^[0-9a-f]{12}$")
 COMPANY_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 ORIGINAL_TAG = "original"
 DEFAULT_GITIGNORE = "__pycache__/\n*.pyc\n"
+
+
+def _robust_rmtree(path: Path) -> None:
+    """Remove a directory tree, handling Windows file-locking issues."""
+    def _onerror(func, fpath, _exc_info):
+        # On Windows, git index files can be read-only; chmod and retry
+        try:
+            os.chmod(fpath, stat.S_IWRITE)
+            func(fpath)
+        except OSError:
+            pass
+
+    for attempt in range(3):
+        shutil.rmtree(path, onerror=_onerror)
+        if not path.exists():
+            return
+        time.sleep(0.1 * (attempt + 1))
+    # Final attempt: ignore any remaining errors
+    shutil.rmtree(path, ignore_errors=True)
 
 
 class WorkspaceManager:
@@ -81,7 +103,7 @@ class WorkspaceManager:
     def delete_session(self, session_id: str) -> None:
         session = self.get_session(session_id)
         with self.lock(session_id):
-            shutil.rmtree(session.root, ignore_errors=True)
+            _robust_rmtree(session.root)
         with self._locks_guard:
             self._locks.pop(session_id, None)
 

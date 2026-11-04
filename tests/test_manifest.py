@@ -1,170 +1,96 @@
-"""Tests for engine.manifest — CompanyManifest model and loader."""
-
 from __future__ import annotations
 
 from pathlib import Path
-from textwrap import dedent
 
 import pytest
-from engine.manifest import CompanyManifest, ManifestLoadError, load_manifest
-from pydantic import ValidationError
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+from engine.errors import ManifestError
+from engine.manifest import MANIFEST_FILENAME, load_manifest
 
-VALID_YAML = dedent("""\
-    name: starter
-    language: python
-    run: "uvicorn app.main:app --host 127.0.0.1 --port {port}"
-    health_path: /health
-    health_timeout_s: 10
-    source_dirs: [app]
-""")
+VALID = """\
+name: demo
+language: python
+run: "python -m uvicorn app.main:app --port {port}"
+health_path: /health
+health_timeout_s: 5
+source_dirs: [app]
+"""
 
 
-@pytest.fixture()
-def manifest_file(tmp_path: Path) -> Path:
-    """Write a valid company.yaml and return its path."""
-    p = tmp_path / "company.yaml"
-    p.write_text(VALID_YAML, encoding="utf-8")
-    return p
+def write(tmp_path: Path, text: str) -> Path:
+    (tmp_path / MANIFEST_FILENAME).write_text(text)
+    return tmp_path
 
 
-# ---------------------------------------------------------------------------
-# Happy path
-# ---------------------------------------------------------------------------
+def test_valid_manifest_loads(tmp_path):
+    manifest = load_manifest(write(tmp_path, VALID))
+    assert manifest.name == "demo"
+    assert manifest.format_run(8123).endswith("--port 8123")
 
 
-def test_load_valid_manifest(manifest_file: Path) -> None:
-    m = load_manifest(manifest_file)
-    assert m.name == "starter"
-    assert m.language == "python"
-    assert "{port}" in m.run
-    assert m.health_path == "/health"
-    assert m.health_timeout_s == 10
-    assert m.source_dirs == ["app"]
+def test_starter_manifest_is_valid():
+    from engine.config import REPO_ROOT
+
+    assert load_manifest(REPO_ROOT / "content/companies/starter").language == "python"
 
 
-def test_defaults_applied() -> None:
-    """health_path and health_timeout_s have defaults."""
-    m = CompanyManifest(
-        name="minimal",
-        language="go",
-        run="./server --port {port}",
-        source_dirs=["src"],
-    )
-    assert m.health_path == "/health"
-    assert m.health_timeout_s == 10
+def test_missing_file(tmp_path):
+    with pytest.raises(ManifestError, match="not found"):
+        load_manifest(tmp_path)
 
 
-# ---------------------------------------------------------------------------
-# Missing required fields
-# ---------------------------------------------------------------------------
+def test_not_a_mapping(tmp_path):
+    with pytest.raises(ManifestError, match="mapping"):
+        load_manifest(write(tmp_path, "- a\n- b\n"))
+
+
+def test_invalid_yaml(tmp_path):
+    with pytest.raises(ManifestError):
+        load_manifest(write(tmp_path, "name: [unclosed"))
+
+
+@pytest.mark.parametrize("field", ["name", "language", "run", "source_dirs"])
+def test_missing_required_field(tmp_path, field):
+    text = "\n".join(line for line in VALID.splitlines() if not line.startswith(field))
+    with pytest.raises(ManifestError, match=field):
+        load_manifest(write(tmp_path, text))
 
 
 @pytest.mark.parametrize(
-    "missing_field",
-    ["name", "language", "run", "source_dirs"],
+    "run",
+    ["python app.py", "python app.py --port {host}", "python app.py {port", "python {}"],
 )
-def test_missing_required_field(tmp_path: Path, missing_field: str) -> None:
-    """Each required field must be present; omitting one raises."""
-    import yaml
-
-    data = yaml.safe_load(VALID_YAML)
-    del data[missing_field]
-    p = tmp_path / "company.yaml"
-    p.write_text(yaml.dump(data), encoding="utf-8")
-
-    with pytest.raises(ManifestLoadError, match="validation failed"):
-        load_manifest(p)
+def test_bad_run_template(tmp_path, run):
+    text = VALID.replace('"python -m uvicorn app.main:app --port {port}"', f'"{run}"')
+    with pytest.raises(ManifestError, match="run"):
+        load_manifest(write(tmp_path, text))
 
 
-# ---------------------------------------------------------------------------
-# Validation: run must contain {port}
-# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("path", ["health", "/he alth", "/health?x=1", ""])
+def test_bad_health_path(tmp_path, path):
+    with pytest.raises(ManifestError, match="health_path"):
+        load_manifest(write(tmp_path, VALID.replace("/health", f'"{path}"', 1)))
 
 
-def test_run_missing_port_placeholder(tmp_path: Path) -> None:
-    bad = VALID_YAML.replace("{port}", "8000")
-    p = tmp_path / "company.yaml"
-    p.write_text(bad, encoding="utf-8")
-
-    with pytest.raises(ManifestLoadError, match="port"):
-        load_manifest(p)
+@pytest.mark.parametrize("entry", ["/abs", "../up", "a/../../b"])
+def test_bad_source_dirs(tmp_path, entry):
+    with pytest.raises(ManifestError, match="source_dirs"):
+        load_manifest(write(tmp_path, VALID.replace("[app]", f'["{entry}"]')))
 
 
-def test_model_rejects_run_without_port() -> None:
-    with pytest.raises(ValidationError, match="port"):
-        CompanyManifest(
-            name="x",
-            language="python",
-            run="uvicorn app:app --port 8000",
-            source_dirs=["app"],
+def test_unsupported_language(tmp_path):
+    with pytest.raises(ManifestError, match="unsupported language"):
+        load_manifest(write(tmp_path, VALID.replace("python\n", "cobol\n", 1)))
+
+
+def test_unknown_field_rejected(tmp_path):
+    with pytest.raises(ManifestError):
+        load_manifest(write(tmp_path, VALID + "surprise: 1\n"))
+
+
+@pytest.mark.parametrize("timeout", ["0", "-1", "500"])
+def test_timeout_bounds(tmp_path, timeout):
+    with pytest.raises(ManifestError, match="health_timeout_s"):
+        load_manifest(
+            write(tmp_path, VALID.replace("health_timeout_s: 5", f"health_timeout_s: {timeout}"))
         )
-
-
-# ---------------------------------------------------------------------------
-# Validation: health_path must start with /
-# ---------------------------------------------------------------------------
-
-
-def test_health_path_without_leading_slash(tmp_path: Path) -> None:
-    bad = VALID_YAML.replace("/health", "health")
-    p = tmp_path / "company.yaml"
-    p.write_text(bad, encoding="utf-8")
-
-    with pytest.raises(ManifestLoadError, match="health_path"):
-        load_manifest(p)
-
-
-def test_model_rejects_bad_health_path() -> None:
-    with pytest.raises(ValidationError, match="health_path"):
-        CompanyManifest(
-            name="x",
-            language="python",
-            run="./run --port {port}",
-            health_path="no-slash",
-            source_dirs=["src"],
-        )
-
-
-# ---------------------------------------------------------------------------
-# Validation: source_dirs must be non-empty
-# ---------------------------------------------------------------------------
-
-
-def test_empty_source_dirs(tmp_path: Path) -> None:
-    bad = VALID_YAML.replace("[app]", "[]")
-    p = tmp_path / "company.yaml"
-    p.write_text(bad, encoding="utf-8")
-
-    with pytest.raises(ManifestLoadError, match="validation failed"):
-        load_manifest(p)
-
-
-# ---------------------------------------------------------------------------
-# File-level errors
-# ---------------------------------------------------------------------------
-
-
-def test_file_not_found(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError, match="not found"):
-        load_manifest(tmp_path / "nope.yaml")
-
-
-def test_invalid_yaml(tmp_path: Path) -> None:
-    p = tmp_path / "company.yaml"
-    p.write_text("{{not valid yaml: [", encoding="utf-8")
-
-    with pytest.raises(ManifestLoadError, match="Invalid YAML"):
-        load_manifest(p)
-
-
-def test_yaml_non_mapping(tmp_path: Path) -> None:
-    """A YAML file that parses to a list instead of a dict."""
-    p = tmp_path / "company.yaml"
-    p.write_text("- item1\n- item2\n", encoding="utf-8")
-
-    with pytest.raises(ManifestLoadError, match="mapping"):
-        load_manifest(p)

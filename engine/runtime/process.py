@@ -93,16 +93,13 @@ class ProcessRuntime:
             return
 
         if os.name == "nt":
-            proc.terminate()
-            try:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                capture_output=True,
+                check=False,
+            )
+            with contextlib.suppress(subprocess.TimeoutExpired):
                 proc.wait(timeout=self._grace)
-            except subprocess.TimeoutExpired:
-                subprocess.run(
-                    ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
-                    capture_output=True,
-                    check=False,
-                )
-                proc.wait()
         else:
             pgid = proc.pid  # start_new_session=True made the child its own group leader
             self._signal_group(pgid, signal.SIGTERM)

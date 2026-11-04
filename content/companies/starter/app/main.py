@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .greetings import build_greeting
+from .greeting import build_greeting
 
 app = FastAPI(title="Starter Company")
 
