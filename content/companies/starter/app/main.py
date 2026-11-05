@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from .greeting import build_greeting
 
 app = FastAPI(title="Starter Company")
@@ -6,7 +7,7 @@ app = FastAPI(title="Starter Company")
 
 @app.get("/health")
 def health():
-    return{"status": "ok"}
+    return {"status": "ok"}
 
 
 @app.get("/hello")
