@@ -5,7 +5,6 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
 from engine.config import REPO_ROOT, Settings
 from engine.workspace import WorkspaceManager
 

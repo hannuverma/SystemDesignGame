@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from engine.errors import ManifestError
 from engine.manifest import MANIFEST_FILENAME, load_manifest
 
@@ -58,7 +57,12 @@ def test_missing_required_field(tmp_path, field):
 
 @pytest.mark.parametrize(
     "run",
-    ["python app.py", "python app.py --port {host}", "python app.py {port", "python {}"],
+    [
+        "python app.py",
+        "python app.py --port {host}",
+        "python app.py {port",
+        "python {}",
+    ],
 )
 def test_bad_run_template(tmp_path, run):
     text = VALID.replace('"python -m uvicorn app.main:app --port {port}"', f'"{run}"')
@@ -92,5 +96,8 @@ def test_unknown_field_rejected(tmp_path):
 def test_timeout_bounds(tmp_path, timeout):
     with pytest.raises(ManifestError, match="health_timeout_s"):
         load_manifest(
-            write(tmp_path, VALID.replace("health_timeout_s: 5", f"health_timeout_s: {timeout}"))
+            write(
+                tmp_path,
+                VALID.replace("health_timeout_s: 5", f"health_timeout_s: {timeout}"),
+            )
         )

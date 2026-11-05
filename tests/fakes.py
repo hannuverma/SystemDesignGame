@@ -31,14 +31,20 @@ class FakeRuntime:
     def _source(workdir: Path) -> str:
         return "\n".join(p.read_text() for p in sorted(workdir.rglob("*.py")))
 
-    def start(self, workdir: Path, manifest: CompanyManifest, log_path: Path) -> RunHandle:
+    def start(
+        self, workdir: Path, manifest: CompanyManifest, log_path: Path
+    ) -> RunHandle:
         self.starts += 1
         source = self._source(workdir)
         if self.starts in self.fail_starts or "NO_START" in source:
             raise RuntimeStartError("fake: cannot start", ["fake log: boom"])
         run_id = f"fake-{next(self._ids)}"
         self._state[run_id] = (
-            "dead" if "CRASH_ME" in source else "unhealthy" if "HEALTH_FAIL" in source else "up"
+            "dead"
+            if "CRASH_ME" in source
+            else "unhealthy"
+            if "HEALTH_FAIL" in source
+            else "up"
         )
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("a") as log:

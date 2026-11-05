@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from engine.errors import InvalidStageCode, StageNotFound, StageParseError
 from engine.workspace.stages import apply_stage_edit, scan_text
 
@@ -39,7 +38,9 @@ def test_scan_finds_regions_even_with_decorators_and_col0_strings():
     assert stages["greeting"].code == 'def build(name):\n    return {"m": name}'
     assert stages["greeting"].symbol == "build"
     assert stages["price"].code.startswith("@staticmethod\ndef price")
-    assert stages["price"].code.endswith("    return x")  # the col-0 string did not end it early
+    assert stages["price"].code.endswith(
+        "    return x"
+    )  # the col-0 string did not end it early
 
 
 def test_round_trip_is_byte_identical():
@@ -48,13 +49,19 @@ def test_round_trip_is_byte_identical():
 
 
 def test_only_the_region_changes():
-    new = edit(SRC, "hello", "greeting", 'def build(name):\n    return {"m": "yo " + name}')
+    new = edit(
+        SRC, "hello", "greeting", 'def build(name):\n    return {"m": "yo " + name}'
+    )
     assert new.replace('"yo " + name', "name") == SRC
     assert "def other():\n    return 1" in new
 
 
 def test_edit_can_grow_and_shrink():
-    big = "def build(name):\n" + "".join(f"    x{i} = {i}\n" for i in range(30)) + "    return {}"
+    big = (
+        "def build(name):\n"
+        + "".join(f"    x{i} = {i}\n" for i in range(30))
+        + "    return {}"
+    )
     grown = edit(SRC, "hello", "greeting", big)
     assert scan_text(grown, "f.py")[0].code == big
     shrunk = edit(grown, "hello", "greeting", "def build(name):\n    return {}")
@@ -70,13 +77,18 @@ def test_crlf_files_keep_their_line_endings():
 
 def test_no_trailing_newline_at_eof_is_preserved():
     text = "# @stage: a endpoint=e order=1\ndef f():\n    return 1"
-    assert edit(text, "e", "a", "def f():\n    return 2") == text.replace("return 1", "return 2")
+    assert edit(text, "e", "a", "def f():\n    return 2") == text.replace(
+        "return 1", "return 2"
+    )
     assert not edit(text, "e", "a", "def f():\n    return 2\n\n").endswith("\n")
 
 
 def test_leading_and_trailing_blank_lines_in_new_code_are_ignored():
     new = edit(SRC, "hello", "greeting", "\n\ndef build(name):\n    return 2\n\n\n")
-    assert "# @stage: greeting endpoint=hello order=1\ndef build(name):\n    return 2\n" in new
+    assert (
+        "# @stage: greeting endpoint=hello order=1\ndef build(name):\n    return 2\n"
+        in new
+    )
 
 
 @pytest.mark.parametrize(
@@ -103,7 +115,12 @@ def test_invalid_new_code_rejected(code, message):
 def test_size_limit():
     with pytest.raises(InvalidStageCode, match="larger"):
         apply_stage_edit(
-            SRC, "f.py", "hello", "greeting", "def build(n):\n    pass\n" + "#" * 50, max_bytes=30
+            SRC,
+            "f.py",
+            "hello",
+            "greeting",
+            "def build(n):\n    pass\n" + "#" * 50,
+            max_bytes=30,
         )
 
 
@@ -116,10 +133,16 @@ def test_unknown_stage():
     "text, message",
     [
         ("# @stage: a endpoint=e order=1\n", "directly above"),  # tag at EOF
-        ("# @stage: a endpoint=e order=1\n\ndef f():\n    pass\n", "directly above"),  # blank gap
+        (
+            "# @stage: a endpoint=e order=1\n\ndef f():\n    pass\n",
+            "directly above",
+        ),  # blank gap
         ("# @stage: a endpoint=e order=1\nx = 1\n", "directly above"),  # not a def
         ("# @stage: a endpoint=e\ndef f():\n    pass\n", "malformed"),  # missing order
-        ("  # @stage: a endpoint=e order=1\ndef f():\n    pass\n", "malformed"),  # indented tag
+        (
+            "  # @stage: a endpoint=e order=1\ndef f():\n    pass\n",
+            "malformed",
+        ),  # indented tag
         (
             "# @stage: a endpoint=e order=1\ndef f():\n    pass\n"
             "# @stage: a endpoint=e order=2\ndef g():\n    pass\n",

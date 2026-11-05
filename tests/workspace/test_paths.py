@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import pytest
-
 from engine.errors import PathEscape
 from engine.workspace.paths import atomic_write_bytes, resolve_inside
 
@@ -28,7 +26,9 @@ def test_symlink_escape_rejected(tmp_path):
     try:
         (root / "link").symlink_to(outside)
     except OSError:
-        pytest.skip("Creating symlinks requires administrator or Developer Mode on Windows")
+        pytest.skip(
+            "Creating symlinks requires administrator or Developer Mode on Windows"
+        )
     with pytest.raises(PathEscape):
         resolve_inside(root, "link/secret.txt")
 
@@ -44,4 +44,6 @@ def test_atomic_write_replaces_and_keeps_mode(tmp_path):
         assert target.stat().st_mode & 0o777 == 0o600
     else:
         assert target.stat().st_mode == mode_before
-    assert [p.name for p in tmp_path.iterdir()] == ["f.txt"]  # no temp files left behind
+    assert [p.name for p in tmp_path.iterdir()] == [
+        "f.txt"
+    ]  # no temp files left behind

@@ -7,9 +7,9 @@ from dataclasses import replace
 
 import httpx
 import pytest
+from engine.api.app import create_app
 from fastapi.testclient import TestClient
 
-from engine.api.app import create_app
 from tests.fakes import FakeRuntime
 
 GOOD = 'def build_greeting(name: str) -> dict:\n    return {"message": f"Yo {name}"}'
@@ -56,8 +56,10 @@ def test_put_stage_deploys(client, sid):
     assert response.status_code == 200 and response.json()["status"] == "deployed"
     assert "Yo" in client.get(STAGE.format(sid)).json()["code"]
     assert client.get(f"/sessions/{sid}/deploys/latest").json()["status"] == "deployed"
-    assert [h["message"] for h in client.get(f"/sessions/{sid}/history").json()][0].startswith(
-        "deploy:"
+    assert (
+        client.get(f"/sessions/{sid}/history")
+        .json()[0]["message"]
+        .startswith("deploy:")
     )
 
 
@@ -80,7 +82,12 @@ def test_put_crashing_code_is_409_and_rolled_back(client, sid):
 
 
 def test_put_unknown_stage_404_and_bad_body_422(client, sid):
-    assert client.put(f"/sessions/{sid}/stages/hello/nope", json={"code": GOOD}).status_code == 404
+    assert (
+        client.put(
+            f"/sessions/{sid}/stages/hello/nope", json={"code": GOOD}
+        ).status_code
+        == 404
+    )
     assert client.put(STAGE.format(sid), json={}).status_code == 422
 
 

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import pytest
-
 from engine.config import REPO_ROOT
-from engine.errors import CompanyNotFound, InvalidStageCode, SessionNotFound, StageNotFound
+from engine.errors import (
+    CompanyNotFound,
+    InvalidStageCode,
+    SessionNotFound,
+    StageNotFound,
+)
 
 NEW = 'def build_greeting(name: str) -> dict:\n    return {"message": f"Yo {name}"}'
 
@@ -13,7 +17,9 @@ def test_create_session_copies_template_and_tracks_it_in_git(workspace):
     assert (session.company_dir / "company.yaml").exists()
     assert (session.company_dir / ".git").is_dir()
     assert [h["message"] for h in workspace.history(session)] == ["initial"]
-    assert session.log_path.parent == session.root / "logs"  # logs live outside the repo
+    assert (
+        session.log_path.parent == session.root / "logs"
+    )  # logs live outside the repo
 
 
 def test_sessions_are_isolated_from_each_other_and_from_the_template(workspace):
