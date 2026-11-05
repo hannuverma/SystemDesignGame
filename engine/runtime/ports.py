@@ -9,6 +9,7 @@ def find_free_port() -> int:
         sock.bind((HOST, 0))
         return sock.getsockname()[1]
 
+
 def port_is_free(port: int) -> bool:
     """Same bind semantics servers use (SO_REUSEADDR), so TIME_WAIT doesn't count as taken."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

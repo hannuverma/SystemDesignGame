@@ -8,7 +8,8 @@ from pathlib import Path
 
 from engine.errors import PathEscape
 
-def resolve_inside(root: Path, relative: str|Path) -> Path:
+
+def resolve_inside(root: Path, relative: str | Path) -> Path:
     """Resolve `relative` under `root`, rejecting absolute paths, '..' and escaping symlinks."""
     rel = Path(relative)
     if rel.is_absolute():
@@ -18,6 +19,7 @@ def resolve_inside(root: Path, relative: str|Path) -> Path:
     if not candidate.is_relative_to(root_resolved):
         raise PathEscape(f"path escapes its root: {relative}")
     return candidate
+
 
 def atomic_write_bytes(path: Path, data: bytes) -> None:
     """Write via temp file + os.replace so a crash never leaves a half-written file."""

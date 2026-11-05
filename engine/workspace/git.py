@@ -1,8 +1,9 @@
-
 from __future__ import annotations
-from pathlib import Path
+
 import os
 import subprocess
+from pathlib import Path
+
 from engine.errors import GitError
 
 _IDENTITY = {
@@ -11,6 +12,7 @@ _IDENTITY = {
     "GIT_COMMITTER_NAME": "sysdesign-game",
     "GIT_COMMITTER_EMAIL": "game@localhost",
 }
+
 
 class Git:
     def __init__(self, repo: Path, timeout_s: float = 10.0) -> None:
@@ -47,21 +49,21 @@ class Git:
         return proc.stdout.strip()
 
     def init(self) -> None:
-        self.run('init', '-q')
+        self.run("init", "-q")
 
     def head(self) -> str:
-        return self.run('rev-parse', 'head')
+        return self.run("rev-parse", "head")
 
     def commit_all(self, message: str) -> str:
         self.run("add", "-A")
 
         if self.run("status", "--porcelain"):
-            self.run("commit", '-q', '-m', message)
+            self.run("commit", "-q", "-m", message)
         return self.head()
 
     def tag(self, name: str) -> None:
         return self.run("tag", "-f", name)
-    
+
     def reset_hard(self, ref: str) -> None:
         self.run("reset", "-q", "--hard", ref)
 
@@ -72,4 +74,3 @@ class Git:
             sha, message, date = line.split("\x1f")
             entries.append({"commit": sha, "message": message, "date": date})
         return entries
-

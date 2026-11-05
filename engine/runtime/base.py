@@ -1,8 +1,8 @@
-
 from dataclasses import dataclass
 from pathlib import Path
-from ..manifest import CompanyManifest
 from typing import Protocol
+
+from ..manifest import CompanyManifest
 
 
 @dataclass(frozen=True)
@@ -16,14 +16,17 @@ class RunHandle:
 
     @property
     def base_url(self):
-        return f"http://127.0.0.1:{self.port}" 
-    
+        return f"http://127.0.0.1:{self.port}"
+
     @property
     def health_url(self):
         return f"{self.base_url}{self.manifest.health_path}"
 
+
 class Runtime(Protocol):
-    def start(self, workdir: Path, manifest: CompanyManifest, log_path: Path) -> RunHandle:
+    def start(
+        self, workdir: Path, manifest: CompanyManifest, log_path: Path
+    ) -> RunHandle:
         """Launch the company. Raises RuntimeStartError if it cannot be launched at all."""
 
     def stop(self, handle: RunHandle) -> None:
@@ -40,5 +43,3 @@ class Runtime(Protocol):
 
     def logs(self, handle: RunHandle, tail: int = 200) -> list[str]:
         """Last `tail` lines of the company's combined stdout/stderr."""
-
-    

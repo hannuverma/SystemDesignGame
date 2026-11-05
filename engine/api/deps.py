@@ -27,7 +27,9 @@ def build_services(
     settings = settings or Settings()
     workspace = WorkspaceManager(settings)
     runtime = runtime or ProcessRuntime(stop_grace_s=settings.stop_grace_s)
-    return Services(settings, workspace, runtime, Deployer(workspace, runtime, settings))
+    return Services(
+        settings, workspace, runtime, Deployer(workspace, runtime, settings)
+    )
 
 
 def get_services(request: Request) -> Services:

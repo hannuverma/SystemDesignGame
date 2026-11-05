@@ -16,9 +16,7 @@ def list_stages(session: SessionDep, services: ServicesDep):
 
 
 @router.get("/{endpoint}/{name}", response_model=StageDetail)
-def get_stage(
-    endpoint: str, name: str, session: SessionDep, services: ServicesDep
-):
+def get_stage(endpoint: str, name: str, session: SessionDep, services: ServicesDep):
     return StageDetail.of(services.workspace.get_stage(session, endpoint, name))
 
 

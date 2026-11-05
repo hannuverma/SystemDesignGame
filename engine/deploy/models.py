@@ -12,7 +12,9 @@ DeployStatus = Literal["deployed", "rejected", "rolled_back", "broken"]
 @dataclass(frozen=True)
 class DeployResult:
     status: DeployStatus
-    step: str | None  # which step failed: validate | write | commit | restart | health | rollback
+    step: (
+        str | None
+    )  # which step failed: validate | write | commit | restart | health | rollback
     message: str
     endpoint: str | None = None
     stage: str | None = None

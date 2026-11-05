@@ -27,6 +27,7 @@ DEFAULT_GITIGNORE = "__pycache__/\n*.pyc\n"
 
 def _robust_rmtree(path: Path) -> None:
     """Remove a directory tree, handling Windows file-locking issues."""
+
     def _onerror(func, fpath, _exc_info):
         # On Windows, git index files can be read-only; chmod and retry
         try:
@@ -71,7 +72,9 @@ class WorkspaceManager:
         try:
             root.mkdir(parents=True)
             shutil.copytree(
-                template, company_dir, ignore=shutil.ignore_patterns("__pycache__", ".git")
+                template,
+                company_dir,
+                ignore=shutil.ignore_patterns("__pycache__", ".git"),
             )
             gitignore = company_dir / ".gitignore"
             if not gitignore.exists():
@@ -138,13 +141,20 @@ class WorkspaceManager:
                 return stage
         raise StageNotFound(f"no stage {name!r} for endpoint {endpoint!r}")
 
-    def write_stage(self, session: Session, endpoint: str, name: str, new_code: str) -> Stage:
+    def write_stage(
+        self, session: Session, endpoint: str, name: str, new_code: str
+    ) -> Stage:
         """Validate and apply the edit in memory, then write the file atomically."""
         stage = self.get_stage(session, endpoint, name)
         path = resolve_inside(session.company_dir, stage.file)
         text = path.read_bytes().decode("utf-8")
         new_text = apply_stage_edit(
-            text, stage.file, endpoint, name, new_code, max_bytes=self._settings.max_stage_bytes
+            text,
+            stage.file,
+            endpoint,
+            name,
+            new_code,
+            max_bytes=self._settings.max_stage_bytes,
         )
         atomic_write_bytes(path, new_text.encode("utf-8"))
         return self.get_stage(session, endpoint, name)

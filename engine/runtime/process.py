@@ -72,7 +72,7 @@ class ProcessRuntime:
                 popen_kwargs["start_new_session"] = True
 
             try:
-                proc = subprocess.Popen(  # noqa: S603 - list argv, no shell
+                proc = subprocess.Popen(
                     argv,
                     cwd=workdir,
                     env=env,
@@ -101,7 +101,9 @@ class ProcessRuntime:
             with contextlib.suppress(subprocess.TimeoutExpired):
                 proc.wait(timeout=self._grace)
         else:
-            pgid = proc.pid  # start_new_session=True made the child its own group leader
+            pgid = (
+                proc.pid
+            )  # start_new_session=True made the child its own group leader
             self._signal_group(pgid, signal.SIGTERM)
             with contextlib.suppress(subprocess.TimeoutExpired):
                 proc.wait(timeout=self._grace)

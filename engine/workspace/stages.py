@@ -70,7 +70,9 @@ def _find_tags(text: str, filename: str) -> list[_Tag]:
                     f"{filename}:{row}: malformed stage tag, expected "
                     "'# @stage: <name> endpoint=<endpoint> order=<int>' at column 0"
                 )
-            tags.append(_Tag(row - 1, match["name"], match["endpoint"], int(match["order"])))
+            tags.append(
+                _Tag(row - 1, match["name"], match["endpoint"], int(match["order"]))
+            )
     except (tokenize.TokenError, SyntaxError) as exc:
         raise StageParseError(f"{filename}: cannot tokenize source: {exc}") from exc
     return tags
@@ -154,17 +156,25 @@ def apply_stage_edit(
     before = scan_text(text, filename)
     target = next((s for s in before if s.key == (endpoint, name)), None)
     if target is None:
-        raise StageNotFound(f"no stage {name!r} for endpoint {endpoint!r} in {filename}")
+        raise StageNotFound(
+            f"no stage {name!r} for endpoint {endpoint!r} in {filename}"
+        )
     if symbol != target.symbol:
-        raise InvalidStageCode(f"the stage must keep defining {target.symbol!r}, not {symbol!r}")
+        raise InvalidStageCode(
+            f"the stage must keep defining {target.symbol!r}, not {symbol!r}"
+        )
 
     lines = split_lines(text)
     eol = "\r\n" if "\r\n" in text else "\n"
     last = lines[target.end_line - 1]
-    trailing_eol = last[len(last.rstrip("\r\n")) :]  # keep "no newline at EOF" as it was
+    trailing_eol = last[
+        len(last.rstrip("\r\n")) :
+    ]  # keep "no newline at EOF" as it was
     new_region = code.replace("\n", eol) + trailing_eol
     new_text = (
-        "".join(lines[: target.start_line - 1]) + new_region + "".join(lines[target.end_line :])
+        "".join(lines[: target.start_line - 1])
+        + new_region
+        + "".join(lines[target.end_line :])
     )
 
     # Re-verify: the edit must change this stage and nothing else.

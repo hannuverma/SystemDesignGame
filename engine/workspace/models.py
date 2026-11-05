@@ -5,6 +5,7 @@ from pathlib import Path
 
 from engine.manifest import CompanyManifest
 
+
 @dataclass(frozen=True)
 class Stage:
     name: str
@@ -19,6 +20,7 @@ class Stage:
     @property
     def key(self) -> tuple[str, str]:
         return (self.endpoint, self.name)
+
 
 @dataclass(frozen=True)
 class Session:

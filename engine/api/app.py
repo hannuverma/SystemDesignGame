@@ -24,17 +24,24 @@ STATUS_BY_ERROR: dict[type[Exception], int] = {
     errors.RuntimeStartError: 500,
 }
 
-def create_app(settings: Settings | None = None, runtime: Runtime | None = None) -> FastAPI:
+
+def create_app(
+    settings: Settings | None = None, runtime: Runtime | None = None
+) -> FastAPI:
     services = build_services(settings, runtime)
+
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         yield
         services.deployer.shutdown_all()  # never leave company processes behind
+
     app = FastAPI(title="sysdesign-game engine", lifespan=lifespan)
     app.state.services = services
 
     @app.exception_handler(errors.GameError)
     async def game_error_handler(_: Request, exc: errors.GameError) -> JSONResponse:
-        status = next((STATUS_BY_ERROR[t] for t in type(exc).__mro__ if t in STATUS_BY_ERROR), 500)
+        status = next(
+            (STATUS_BY_ERROR[t] for t in type(exc).__mro__ if t in STATUS_BY_ERROR), 500
+        )
         body: dict = {"error": type(exc).__name__, "detail": str(exc)}
         if isinstance(exc, errors.RuntimeStartError):
             body["log_tail"] = exc.log_tail

@@ -134,7 +134,9 @@ class Deployer:
 
     # ------------------------------------------------------------- internals
 
-    def _roll_back(self, session: Session, previous: str, failure: _Failure, finish) -> DeployResult:
+    def _roll_back(
+        self, session: Session, previous: str, failure: _Failure, finish
+    ) -> DeployResult:
         step, message, tail = failure
         try:
             self._ws.reset_to(session, previous)
