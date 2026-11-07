@@ -32,7 +32,11 @@ class FakeRuntime:
         return "\n".join(p.read_text() for p in sorted(workdir.rglob("*.py")))
 
     def start(
-        self, workdir: Path, manifest: CompanyManifest, log_path: Path
+        self,
+        workdir: Path,
+        manifest: CompanyManifest,
+        log_path: Path,
+        env: dict[str, str] | None = None,
     ) -> RunHandle:
         self.starts += 1
         source = self._source(workdir)
@@ -55,9 +59,13 @@ class FakeRuntime:
         if self._state.pop(handle.run_id, None) is not None:
             self.stops += 1
 
-    def restart(self, handle: RunHandle) -> RunHandle:
+    def restart(
+        self, handle: RunHandle, env: dict[str, str] | None = None
+    ) -> RunHandle:
         self.stop(handle)
-        return self.start(handle.workdir, handle.manifest, handle.log_path)
+        return self.start(
+            handle.workdir, handle.manifest, handle.log_path, env=env
+        )
 
     def is_running(self, handle: RunHandle) -> bool:
         return self._state.get(handle.run_id) in ("up", "unhealthy")

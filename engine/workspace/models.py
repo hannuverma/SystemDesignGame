@@ -29,3 +29,4 @@ class Session:
     company_dir: Path  # runs/<id>/company/  (the git repo the player edits)
     log_path: Path  # runs/<id>/logs/company.log  (outside the repo on purpose)
     manifest: CompanyManifest
+    secret: str = ""

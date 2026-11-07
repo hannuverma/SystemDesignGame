@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import logging
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI, Request
@@ -7,9 +10,11 @@ from fastapi.responses import JSONResponse
 
 from engine import errors
 from engine.api.deps import build_services
-from engine.api.routes import deploys, sessions, stages
+from engine.api.routes import deploys, events, sessions, stages
 from engine.config import Settings
 from engine.runtime import Runtime
+
+logger = logging.getLogger(__name__)
 
 # The single place where typed engine errors become HTTP status codes.
 STATUS_BY_ERROR: dict[type[Exception], int] = {
@@ -31,8 +36,18 @@ def create_app(
     services = build_services(settings, runtime)
 
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        yield
-        services.deployer.shutdown_all()  # never leave company processes behind
+        services.gateway.start()
+        ticker_task = asyncio.create_task(
+            services.stats.run_ticker(services.bus, interval_s=1.0)
+        )
+        try:
+            yield
+        finally:
+            ticker_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await ticker_task
+            services.gateway.stop()
+            services.deployer.shutdown_all()  # never leave company processes behind
 
     app = FastAPI(title="sysdesign-game engine", lifespan=lifespan)
     app.state.services = services
@@ -50,4 +65,5 @@ def create_app(
     app.include_router(sessions.router)
     app.include_router(stages.router)
     app.include_router(deploys.router)
+    app.include_router(events.router)
     return app

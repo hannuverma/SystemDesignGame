@@ -72,6 +72,7 @@ class CompanyManifest(BaseModel):
     run: str
     health_path: str = "/health"
     health_timeout_s: float = Field(default=10.0, gt=0, le=120)
+    reset_path: str | None = None
     source_dirs: list[str] = Field(min_length=1)
     routes: list[RouteSpec] = Field(default_factory=list)
 
@@ -121,6 +122,17 @@ class CompanyManifest(BaseModel):
         if not value.startswith("/") or " " in value or "?" in value or "#" in value:
             raise ValueError(
                 f"health_path must start with '/' and contain no query, fragment, or whitespace, got {value!r}"
+            )
+        return value
+
+    @field_validator("reset_path")
+    @classmethod
+    def _check_reset_path(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not value.startswith("/") or " " in value or "?" in value or "#" in value:
+            raise ValueError(
+                f"reset_path must start with '/' and contain no query, fragment, or whitespace, got {value!r}"
             )
         return value
 

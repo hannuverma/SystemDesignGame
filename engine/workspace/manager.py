@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import secrets
 import shutil
 import stat
 import threading
@@ -95,12 +96,19 @@ class WorkspaceManager:
         company_dir = root / "company"
         if not company_dir.is_dir():
             raise SessionNotFound(f"no such session: {session_id!r}")
+        secret_path = root / ".secret"
+        if secret_path.is_file():
+            secret = secret_path.read_text(encoding="utf-8").strip()
+        else:
+            secret = secrets.token_hex(16)
+            secret_path.write_text(secret, encoding="utf-8")
         return Session(
             id=session_id,
             root=root,
             company_dir=company_dir,
             log_path=root / "logs" / "company.log",
             manifest=load_manifest(company_dir),
+            secret=secret,
         )
 
     def delete_session(self, session_id: str) -> None:

@@ -45,6 +45,7 @@ def settings(tmp_path: Path) -> Settings:
         health_poll_interval_s=0.01,
         max_health_timeout_s=0.5,  # keep "never healthy" tests fast
         stop_grace_s=1.0,
+        gateway_port=0,
     )
 
 

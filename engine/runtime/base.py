@@ -25,7 +25,11 @@ class RunHandle:
 
 class Runtime(Protocol):
     def start(
-        self, workdir: Path, manifest: CompanyManifest, log_path: Path
+        self,
+        workdir: Path,
+        manifest: CompanyManifest,
+        log_path: Path,
+        env: dict[str, str] | None = None,
     ) -> RunHandle:
         """Launch the company. Raises RuntimeStartError if it cannot be launched at all."""
 

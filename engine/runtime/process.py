@@ -46,6 +46,7 @@ class ProcessRuntime:
         log_path: Path,
         *,
         port: int | None = None,
+        env: dict[str, str] | None = None,
     ) -> RunHandle:
         port = port or find_free_port()
         argv = shlex.split(manifest.format_run(port))
@@ -53,11 +54,12 @@ class ProcessRuntime:
             raise RuntimeStartError("run command is empty")
         if argv[0] in ("python", "python3"):
             argv[0] = sys.executable  # use the same interpreter/venv the engine runs in
-        env = {
+        process_env = {
             **os.environ,
             "PYTHONUNBUFFERED": "1",
             "PYTHONDONTWRITEBYTECODE": "1",  # keep __pycache__ out of the player's repo
             "PORT": str(port),
+            **(env or {}),
         }
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("ab") as log:
@@ -75,7 +77,7 @@ class ProcessRuntime:
                 proc = subprocess.Popen(
                     argv,
                     cwd=workdir,
-                    env=env,
+                    env=process_env,
                     stdin=subprocess.DEVNULL,
                     stdout=log,  # a file, not a pipe: a full pipe would block the child
                     stderr=subprocess.STDOUT,
@@ -112,7 +114,9 @@ class ProcessRuntime:
             self._signal_group(pgid, sigkill)
             proc.wait()
 
-    def restart(self, handle: RunHandle) -> RunHandle:
+    def restart(
+        self, handle: RunHandle, *, env: dict[str, str] | None = None
+    ) -> RunHandle:
         self.stop(handle)
 
         port = handle.port
@@ -122,7 +126,9 @@ class ProcessRuntime:
             time.sleep(0.05)
         else:
             port = find_free_port()
-        return self.start(handle.workdir, handle.manifest, handle.log_path, port=port)
+        return self.start(
+            handle.workdir, handle.manifest, handle.log_path, port=port, env=env
+        )
 
     def is_running(self, handle: RunHandle) -> bool:
         proc = self._procs.get(handle.run_id)

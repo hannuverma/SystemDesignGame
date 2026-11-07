@@ -16,3 +16,5 @@ class Settings:
     max_health_timeout_s: float = 30.0  # upper bound on any manifest's health_timeout_s
     max_stage_bytes: int = 20_000
     log_tail_lines: int = 40
+    gateway_port: int = 8001
+    gateway_timeout_s: float = 5.0
