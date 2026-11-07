@@ -64,6 +64,7 @@ class Services:
     target_resolver: TargetResolver
     route_resolver: RouteResolver
     gateway: GatewayServer
+    probe_token: str
 
 
 def build_services(
@@ -71,12 +72,16 @@ def build_services(
     runtime: Runtime | None = None,
     bus: EventBus | None = None,
     stats: StatsCollector | None = None,
+    probe_token: str | None = None,
 ) -> Services:
+    import secrets
+
     settings = settings or Settings()
     workspace = WorkspaceManager(settings)
     runtime = runtime or ProcessRuntime(stop_grace_s=settings.stop_grace_s)
     bus = bus or EventBus()
     stats = stats or StatsCollector()
+    probe_token = probe_token or secrets.token_hex(16)
     deployer = Deployer(workspace, runtime, settings, bus=bus, stats=stats)
     target_resolver = DeployerTargetResolver(deployer)
     route_resolver = WorkspaceRouteResolver(workspace)
@@ -86,6 +91,7 @@ def build_services(
         bus=bus,
         stats=stats,
         timeout_s=settings.gateway_timeout_s,
+        probe_token=probe_token,
     )
     gateway = GatewayServer(
         app=gateway_app,
@@ -102,6 +108,7 @@ def build_services(
         target_resolver=target_resolver,
         route_resolver=route_resolver,
         gateway=gateway,
+        probe_token=probe_token,
     )
 
 

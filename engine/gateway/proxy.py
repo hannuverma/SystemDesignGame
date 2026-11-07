@@ -56,6 +56,7 @@ async def handle_proxy_request(
     stats: StatsCollector | None = None,
     timeout_s: float = 5.0,
     clock: Callable[[], float] | None = None,
+    probe_token: str | None = None,
 ) -> Response:
     now_fn = clock or time.time
     ts = now_fn()
@@ -66,6 +67,7 @@ async def handle_proxy_request(
 
     method = request.method.upper()
     client_host = request.client.host if request.client else "127.0.0.1"
+    is_probe = bool(probe_token and request.headers.get("x-game-probe") == probe_token)
 
     # Match endpoint
     endpoint = "unmatched"
@@ -95,9 +97,9 @@ async def handle_proxy_request(
             bytes_in=bytes_in,
             bytes_out=0,
         )
-        if stats:
+        if stats and not is_probe:
             stats.record(event)
-        if bus:
+        if bus and not is_probe:
             bus.publish(session_id, event)
         return Response(
             content=b"Upstream Unavailable",
@@ -105,16 +107,14 @@ async def handle_proxy_request(
             headers={"Retry-After": "1"},
         )
 
-    # Forward to upstream
+    # Forward to upstream: overwrite x-forwarded-for, strip probe token
     upstream_url = f"{target_base.rstrip('/')}{subpath}"
     headers = {
-        k: v for k, v in request.headers.items() if k.lower() not in HOP_BY_HOP_HEADERS
+        k: v
+        for k, v in request.headers.items()
+        if k.lower() not in HOP_BY_HOP_HEADERS and k.lower() != "x-game-probe"
     }
-    existing_xfwd = headers.get("x-forwarded-for")
-    if existing_xfwd:
-        headers["x-forwarded-for"] = f"{existing_xfwd}, {client_host}"
-    else:
-        headers["x-forwarded-for"] = client_host
+    headers["x-forwarded-for"] = client_host
 
     upstream_start = time.perf_counter()
     upstream_ms: float | None = None
@@ -170,9 +170,9 @@ async def handle_proxy_request(
         bytes_out=bytes_out,
     )
 
-    if stats:
+    if stats and not is_probe:
         stats.record(event)
-    if bus:
+    if bus and not is_probe:
         bus.publish(session_id, event)
 
     return Response(

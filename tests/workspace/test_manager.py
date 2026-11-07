@@ -35,8 +35,8 @@ def test_sessions_are_isolated_from_each_other_and_from_the_template(workspace):
 def test_list_and_get_stage(workspace):
     session = workspace.create_session()
     stages = workspace.list_stages(session)
-    assert [(s.endpoint, s.name, s.file) for s in stages] == [
-        ("hello", "greeting", "app/greeting.py")
+    assert ("hello", "greeting", "app/greeting.py") in [
+        (s.endpoint, s.name, s.file) for s in stages
     ]
     assert workspace.get_stage(session, "hello", "greeting").symbol == "build_greeting"
     with pytest.raises(StageNotFound):

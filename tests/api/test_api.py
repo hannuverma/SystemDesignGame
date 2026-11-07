@@ -44,7 +44,7 @@ def test_unknown_company_and_session(client):
 
 def test_list_and_get_stages(client, sid):
     listing = client.get(f"/sessions/{sid}/stages").json()
-    assert [(s["endpoint"], s["name"]) for s in listing] == [("hello", "greeting")]
+    assert ("hello", "greeting") in [(s["endpoint"], s["name"]) for s in listing]
     assert "code" not in listing[0]
     detail = client.get(STAGE.format(sid)).json()
     assert detail["code"].startswith("def build_greeting")

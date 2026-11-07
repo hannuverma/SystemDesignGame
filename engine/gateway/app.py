@@ -25,6 +25,7 @@ def create_gateway_app(
     stats: StatsCollector | None = None,
     timeout_s: float = 5.0,
     client: httpx.AsyncClient | None = None,
+    probe_token: str | None = None,
 ) -> FastAPI:
     """Create the gateway ASGI application."""
 
@@ -48,6 +49,7 @@ def create_gateway_app(
     app.state.bus = bus
     app.state.stats = stats
     app.state.timeout_s = timeout_s
+    app.state.probe_token = probe_token
 
     @app.get("/healthz", response_class=PlainTextResponse)
     async def healthz():
@@ -76,6 +78,7 @@ def create_gateway_app(
             bus=app.state.bus,
             stats=app.state.stats,
             timeout_s=app.state.timeout_s,
+            probe_token=app.state.probe_token,
         )
 
     @app.api_route(

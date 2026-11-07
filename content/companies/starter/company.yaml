@@ -3,6 +3,7 @@ language: python
 run: "python -m uvicorn app.main:app --host 127.0.0.1 --port {port}"
 health_path: /health
 health_timeout_s: 15
+reset_path: /__game/reset
 source_dirs: [app]
 routes:
   - name: health
@@ -11,3 +12,15 @@ routes:
   - name: hello
     method: GET
     path: /hello
+  - name: login
+    method: POST
+    path: /login
+  - name: search
+    method: GET
+    path: /search
+  - name: list_items
+    method: GET
+    path: /items
+  - name: delete_item
+    method: DELETE
+    path: /items/{id}

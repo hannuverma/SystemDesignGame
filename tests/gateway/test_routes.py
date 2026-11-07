@@ -9,12 +9,15 @@ from pydantic import ValidationError
 
 def test_starter_manifest_routes() -> None:
     manifest = load_manifest(REPO_ROOT / "content/companies/starter")
-    assert len(manifest.routes) == 2
     names = {r.name for r in manifest.routes}
-    assert names == {"health", "hello"}
+    assert {"health", "hello", "login", "search", "list_items", "delete_item"} <= names
     matcher = RouteMatcher(manifest.routes)
     assert matcher.match("GET", "/health") == "health"
     assert matcher.match("GET", "/hello") == "hello"
+    assert matcher.match("POST", "/login") == "login"
+    assert matcher.match("GET", "/search") == "search"
+    assert matcher.match("GET", "/items") == "list_items"
+    assert matcher.match("DELETE", "/items/123") == "delete_item"
 
 
 def test_route_spec_method_normalization() -> None:

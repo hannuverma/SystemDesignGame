@@ -63,9 +63,7 @@ class FakeRuntime:
         self, handle: RunHandle, env: dict[str, str] | None = None
     ) -> RunHandle:
         self.stop(handle)
-        return self.start(
-            handle.workdir, handle.manifest, handle.log_path, env=env
-        )
+        return self.start(handle.workdir, handle.manifest, handle.log_path, env=env)
 
     def is_running(self, handle: RunHandle) -> bool:
         return self._state.get(handle.run_id) in ("up", "unhealthy")
