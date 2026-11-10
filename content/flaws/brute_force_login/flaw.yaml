@@ -1,0 +1,29 @@
+id: brute_force_login
+title: Brute Force Login
+category: authentication
+endpoint: login
+stage: rate_limit
+attack:
+  command: ["attack.py"]
+  budget:
+    max_requests: 100
+    max_duration_s: 15.0
+    max_concurrency: 5
+contract:
+  - method: POST
+    path: /login
+    json:
+      username: alice
+      password: "{alice_password}"
+    status: 200
+    keys: ["token", "username"]
+    save:
+      alice_token: token
+reference_fix: reference_fix.py
+symptoms: "Abnormal surge in failed login attempts and error rates on /login."
+hints:
+  - "Notice the high volume of requests with status 401 on /login."
+  - "Track failed login attempts per username or IP address over a sliding time window."
+  - "Temporarily reject requests once a user or IP exceeds an acceptable failure threshold."
+lesson: "Without rate limiting or account lockout, attackers can brute-force weak passwords using automated high-velocity dictionary attacks."
+

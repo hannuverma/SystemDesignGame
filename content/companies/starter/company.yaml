@@ -4,6 +4,10 @@ run: "python -m uvicorn app.main:app --host 127.0.0.1 --port {port}"
 health_path: /health
 health_timeout_s: 15
 reset_path: /__game/reset
+fixtures:
+  alice_password: "alice_super_secret_password_123!"
+  admin_password: "admin"
+  bob_password: "bob_password_123"
 source_dirs: [app]
 routes:
   - name: health

@@ -41,6 +41,10 @@ class GatewayServer:
     def url(self) -> str:
         return f"http://{self.host}:{self.port}"
 
+    @property
+    def probe_token(self) -> str | None:
+        return getattr(self.app.state, "probe_token", None)
+
     def start(self, timeout_s: float = 5.0) -> None:
         """Start the gateway server in a background thread and wait until ready."""
         port = self.requested_port

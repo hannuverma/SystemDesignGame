@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 import string
 from pathlib import Path, PurePosixPath
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
@@ -73,6 +74,7 @@ class CompanyManifest(BaseModel):
     health_path: str = "/health"
     health_timeout_s: float = Field(default=10.0, gt=0, le=120)
     reset_path: str | None = None
+    fixtures: dict[str, Any] = Field(default_factory=dict)
     source_dirs: list[str] = Field(min_length=1)
     routes: list[RouteSpec] = Field(default_factory=list)
 

@@ -66,7 +66,10 @@ async def handle_proxy_request(
         subpath = "/" + subpath
 
     method = request.method.upper()
-    client_host = request.client.host if request.client else "127.0.0.1"
+    game_client = request.headers.get("x-game-client")
+    client_host = game_client or (
+        request.client.host if request.client else "127.0.0.1"
+    )
     is_probe = bool(probe_token and request.headers.get("x-game-probe") == probe_token)
 
     # Match endpoint

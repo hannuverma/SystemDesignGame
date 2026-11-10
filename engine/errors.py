@@ -39,6 +39,10 @@ class GitError(GameError):
     """A git operation failed."""
 
 
+class FlawError(GameError):
+    """A flaw module is missing, malformed or references invalid stages."""
+
+
 class RuntimeStartError(GameError):
     """The company process could not be started or did not become healthy."""
 
