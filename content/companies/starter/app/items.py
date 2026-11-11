@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .db import delete_item_by_id, get_item_by_id, get_username_for_token
+from .db import delete_item_by_id, get_username_for_token
 
 
 # @stage: auth_check endpoint=delete_item order=1

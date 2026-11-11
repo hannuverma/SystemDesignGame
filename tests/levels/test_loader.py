@@ -141,4 +141,3 @@ def test_reject_cycle_in_requires(tmp_path) -> None:
 
     with pytest.raises(LevelError, match="cycle detected"):
         load_level(p)
-

@@ -3,4 +3,3 @@
 from engine.levels.models import DifficultyTier, FailMode, LevelSpec, ObjectiveSpec
 
 __all__ = ["DifficultyTier", "FailMode", "LevelSpec", "ObjectiveSpec"]
-

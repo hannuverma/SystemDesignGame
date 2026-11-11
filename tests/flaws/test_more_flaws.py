@@ -25,4 +25,3 @@ def test_load_missing_ownership_flaw() -> None:
     assert flaw.endpoint == "delete_item"
     assert flaw.stage == "ownership_check"
     assert len(flaw.contract) == 2
-

@@ -14,7 +14,10 @@ FLAW_IDOR = REPO_ROOT / "content/flaws/missing_ownership_delete"
 
 def main() -> None:
     print("=" * 65, flush=True)
-    print("Milestone 3b: Levels, Objectives, Progression, Waves, and Regressions", flush=True)
+    print(
+        "Milestone 3b: Levels, Objectives, Progression, Waves, and Regressions",
+        flush=True,
+    )
     print("=" * 65, flush=True)
 
     settings = replace(
@@ -27,7 +30,10 @@ def main() -> None:
     print("Entering TestClient...", flush=True)
     with TestClient(create_app(settings)) as client:
         # Step 1: Start tutorial level session
-        print("\n[1/7] Creating session with tutorial level (guided difficulty)...", flush=True)
+        print(
+            "\n[1/7] Creating session with tutorial level (guided difficulty)...",
+            flush=True,
+        )
         created = client.post(
             "/sessions",
             json={"company": "starter", "level": "tutorial", "difficulty": "guided"},
@@ -48,7 +54,10 @@ def main() -> None:
         ).json()
         print(f"      Deploy status: {dep1['status']}", flush=True)
 
-        print("      Waiting for background verification to unlock objective 2...", flush=True)
+        print(
+            "      Waiting for background verification to unlock objective 2...",
+            flush=True,
+        )
         deadline = time.time() + 25.0
         while time.time() < deadline:
             view = client.get(f"/sessions/{sid}/level").json()
@@ -69,11 +78,16 @@ def main() -> None:
         assert len(dep_broken["warnings"]) > 0
 
         undo_res = client.post(f"/sessions/{sid}/undo").json()
-        print(f"      Undo result: {undo_res['status']} ({undo_res['message']})", flush=True)
+        print(
+            f"      Undo result: {undo_res['status']} ({undo_res['message']})",
+            flush=True,
+        )
         assert undo_res["message"] == "undone"
 
         # Step 4: Deploy reference fix for objective 2 (search)
-        print("\n[4/7] Deploying reference fix for SQL injection in search...", flush=True)
+        print(
+            "\n[4/7] Deploying reference fix for SQL injection in search...", flush=True
+        )
         ref2 = (FLAW_SQLI / "reference_fix.py").read_text(encoding="utf-8")
         dep2 = client.put(
             f"/sessions/{sid}/stages/search/db_query",
@@ -81,7 +95,10 @@ def main() -> None:
         ).json()
         print(f"      Deploy status: {dep2['status']}", flush=True)
 
-        print("      Waiting for background verification to unlock objective 3...", flush=True)
+        print(
+            "      Waiting for background verification to unlock objective 3...",
+            flush=True,
+        )
         deadline = time.time() + 25.0
         while time.time() < deadline:
             view = client.get(f"/sessions/{sid}/level").json()
@@ -92,7 +109,10 @@ def main() -> None:
         assert view["active_objective_id"] == "obj_missing_ownership"
 
         # Step 5: Deploy reference fix for objective 3 (delete)
-        print("\n[5/7] Deploying reference fix for missing ownership on delete...", flush=True)
+        print(
+            "\n[5/7] Deploying reference fix for missing ownership on delete...",
+            flush=True,
+        )
         ref3 = (FLAW_IDOR / "reference_fix.py").read_text(encoding="utf-8")
         dep3 = client.put(
             f"/sessions/{sid}/stages/delete_item/ownership_check",
@@ -113,7 +133,10 @@ def main() -> None:
         assert is_completed is True
 
         # Step 6: Test regression guard
-        print("\n[6/7] Testing regression guard (reintroducing vulnerability)...", flush=True)
+        print(
+            "\n[6/7] Testing regression guard (reintroducing vulnerability)...",
+            flush=True,
+        )
         vuln_login = (
             "def check_login_rate(ip: str, username: str) -> bool:\n    return True\n"
         )

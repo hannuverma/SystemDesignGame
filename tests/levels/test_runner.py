@@ -87,4 +87,3 @@ def test_level_runner_progression_undo_and_hints(settings) -> None:
 
     time.sleep(0.2)
     assert not pid_alive(pid)
-

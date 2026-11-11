@@ -7,6 +7,7 @@ from engine.api.deps import ServicesDep, SessionDep
 from engine.deploy import HTTP_STATUS
 from engine.errors import LevelError
 from engine.events.anomaly import detect_endpoint_status
+from engine.levels.models import DifficultyTier
 from engine.levels.visibility import (
     EndpointStatus,
     LevelView,

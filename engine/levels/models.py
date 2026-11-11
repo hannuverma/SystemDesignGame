@@ -29,4 +29,3 @@ class LevelSpec(BaseModel):
     attack_delay_s: float = Field(default=2.0, ge=0.0)
     wave_interval_s: float = Field(default=10.0, gt=0.0)
     objectives: list[ObjectiveSpec] = Field(min_length=1)
-
