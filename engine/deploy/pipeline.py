@@ -7,7 +7,9 @@ workspace and the runtime; neither of them knows about the other.
 
 from __future__ import annotations
 
+import logging
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from engine.config import Settings
@@ -23,6 +25,8 @@ if TYPE_CHECKING:
     from engine.events.bus import EventBus
     from engine.events.stats import StatsCollector
 
+logger = logging.getLogger(__name__)
+
 _Failure = tuple[str, str, list[str]]  # (step, message, log tail)
 
 
@@ -34,14 +38,22 @@ class Deployer:
         settings: Settings,
         bus: EventBus | None = None,
         stats: StatsCollector | None = None,
+        post_deploy_hook: Callable[[Session, DeployResult], list[str] | None]
+        | None = None,
     ):
         self._ws = workspace
         self._runtime = runtime
         self._settings = settings
         self._bus = bus
         self._stats = stats
+        self._post_deploy_hook = post_deploy_hook
         self._handles: dict[str, RunHandle] = {}
         self._latest: dict[str, DeployResult] = {}
+
+    def set_post_deploy_hook(
+        self, hook: Callable[[Session, DeployResult], list[str] | None] | None
+    ) -> None:
+        self._post_deploy_hook = hook
 
     # ------------------------------------------------------------ lifecycle
 
@@ -117,7 +129,9 @@ class Deployer:
                         ),
                     )
 
-            def finish(status, step, message, tail=None, commit=None) -> DeployResult:
+            def finish(
+                status, step, message, tail=None, commit=None, warnings=None
+            ) -> DeployResult:
                 handle = self._handles.get(session.id)
                 result = DeployResult(
                     status=status,
@@ -130,6 +144,7 @@ class Deployer:
                     url=handle.base_url if handle else None,
                     duration_s=round(time.monotonic() - started, 3),
                     log_tail=tail or [],
+                    warnings=warnings or [],
                 )
                 self._latest[session.id] = result
                 if self._bus:
@@ -171,7 +186,83 @@ class Deployer:
 
             if failure:
                 return self._roll_back(session, previous, failure, finish)
-            return finish("deployed", None, "deployed", commit=commit)
+
+            warnings: list[str] = []
+            if self._post_deploy_hook:
+                try:
+                    res_warn = self._post_deploy_hook(
+                        session,
+                        DeployResult(
+                            status="deployed",
+                            step=None,
+                            message="deployed",
+                            commit=commit,
+                            previous_commit=previous,
+                            endpoint=endpoint,
+                            stage=name,
+                        ),
+                    )
+                    if res_warn:
+                        warnings = list(res_warn)
+                except Exception as exc:
+                    logger.warning("Post-deploy hook failed: %s", exc)
+
+            return finish(
+                "deployed", None, "deployed", commit=commit, warnings=warnings
+            )
+
+    def undo(self, session: Session) -> DeployResult:
+        """Undo the last deployment by rolling back to the previous git commit."""
+        started = time.monotonic()
+        with self._ws.lock(session.id):
+            history = self._ws.history(session, limit=2)
+            if len(history) < 2:
+                from engine.errors import GameError
+
+                raise GameError("nothing to undo")
+
+            target_commit = history[1]["commit"]
+            previous_commit = history[0]["commit"]
+            self._ws.reset_to(session, target_commit)
+            failure = self._boot_and_wait(session)
+            handle = self._handles.get(session.id)
+            if failure:
+                step, message, tail = failure
+                result = DeployResult(
+                    status="broken",
+                    step=step,
+                    message=message,
+                    commit=target_commit,
+                    previous_commit=previous_commit,
+                    log_tail=tail,
+                    duration_s=round(time.monotonic() - started, 3),
+                )
+            else:
+                result = DeployResult(
+                    status="deployed",
+                    step=None,
+                    message="undone",
+                    commit=target_commit,
+                    previous_commit=previous_commit,
+                    url=handle.base_url if handle else None,
+                    duration_s=round(time.monotonic() - started, 3),
+                )
+            self._latest[session.id] = result
+            if self._bus:
+                self._bus.publish(
+                    session.id,
+                    DeployEvent(
+                        session_id=session.id,
+                        ts=time.time(),
+                        phase="finished",
+                        endpoint="all",
+                        stage="undo",
+                        step="done" if not failure else "broken",
+                        status=result.status,
+                        message=result.message,
+                    ),
+                )
+            return result
 
     def reset(self, session: Session) -> DeployResult:
         """Throw away all edits: back to the original template, restarted."""

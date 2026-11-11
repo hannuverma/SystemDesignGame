@@ -1,0 +1,35 @@
+id: missing_ownership_delete
+title: Insecure Direct Object Reference on Item Delete
+category: authorization
+endpoint: delete_item
+stage: ownership_check
+attack:
+  command: ["attack.py"]
+  budget:
+    max_requests: 20
+    max_duration_s: 15.0
+    max_concurrency: 2
+contract:
+  - method: POST
+    path: /login
+    json:
+      username: alice
+      password: "{alice_password}"
+    status: 200
+    keys: ["token"]
+    save:
+      alice_token: token
+  - method: DELETE
+    path: /items/1
+    headers:
+      Authorization: "Bearer {alice_token}"
+    status: 200
+    keys: ["deleted"]
+reference_fix: reference_fix.py
+symptoms: "Items belonging to users are deleted by unauthorized third-party accounts."
+hints:
+  - "Inspect item deletion to verify if the requester's identity is checked against the item owner."
+  - "Fetch the item record from the database before deletion and compare its owner with username."
+  - "Reject deletion with 403 Forbidden when username does not match the item's owner."
+lesson: "Missing ownership verification (BOLA / IDOR, CWE-639) permits authenticated attackers to mutate or delete resources belonging to other users."
+

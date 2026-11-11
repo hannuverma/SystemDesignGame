@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from engine import errors
 from engine.api.deps import build_services
-from engine.api.routes import attacks, deploys, events, sessions, stages
+from engine.api.routes import attacks, deploys, events, levels, sessions, stages
 from engine.config import Settings
 from engine.runtime import Runtime
 
@@ -31,6 +31,8 @@ STATUS_BY_ERROR: dict[type[Exception], int] = {
     errors.AttackNotFound: 404,
     errors.AttackConflict: 409,
     errors.FlawError: 400,
+    errors.LevelNotFound: 404,
+    errors.LevelError: 400,
 }
 
 
@@ -71,4 +73,5 @@ def create_app(
     app.include_router(deploys.router)
     app.include_router(events.router)
     app.include_router(attacks.router)
+    app.include_router(levels.router)
     return app

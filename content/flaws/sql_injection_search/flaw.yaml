@@ -1,0 +1,24 @@
+id: sql_injection_search
+title: SQL Injection in Item Search
+category: injection
+endpoint: search
+stage: db_query
+attack:
+  command: ["attack.py"]
+  budget:
+    max_requests: 30
+    max_duration_s: 15.0
+    max_concurrency: 2
+contract:
+  - method: GET
+    path: /search?q=laptop
+    status: 200
+    keys: ["query", "results"]
+reference_fix: reference_fix.py
+symptoms: "Unusual query structures and sensitive user data appearing in search results."
+hints:
+  - "Examine how search queries are formatted and executed against the database."
+  - "Never concatenate user input directly into SQL strings using f-strings or string formatting."
+  - "Use parameterized SQL queries with placeholders '?' to safely bind user input."
+lesson: "Concatenating unescaped user input into SQL queries creates SQL Injection vulnerabilities (CWE-89), enabling attackers to dump databases via UNION SELECT."
+

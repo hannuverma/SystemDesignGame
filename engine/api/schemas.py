@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from engine.bots.models import BotResult
 from engine.flaws.models import BudgetConfig
+from engine.levels.models import DifficultyTier
 from engine.verify.attacks import AttackRecord, AttackStatus
 from engine.verify.contract import ContractResult
 from engine.verify.verdict import Verdict
@@ -12,6 +13,8 @@ from engine.workspace import Stage
 
 class CreateSessionRequest(BaseModel):
     company: str = "starter"
+    level: str | None = None
+    difficulty: DifficultyTier | None = None
 
 
 class SessionOut(BaseModel):

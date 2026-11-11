@@ -23,6 +23,7 @@ class DeployResult:
     url: str | None = None
     duration_s: float = 0.0
     log_tail: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)

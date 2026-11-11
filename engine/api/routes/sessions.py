@@ -31,6 +31,15 @@ def create_session(body: CreateSessionRequest, services: ServicesDep):
     except Exception:
         services.workspace.delete_session(session.id)
         raise
+
+    if body.level:
+        level = services.levels_runner.levels.get(body.level)
+        if not level:
+            from engine.errors import LevelNotFound
+
+            raise LevelNotFound(f"Level not found: {body.level}")
+        services.levels_runner.attach_level(session, level, difficulty=body.difficulty)
+
     return _session_out(services, session)
 
 
@@ -48,6 +57,7 @@ def get_session_history(
 
 @router.delete("/{session_id}", status_code=204)
 def delete_session(session: SessionDep, services: ServicesDep):
+    services.levels_runner.stop_session(session.id)
     services.deployer.shutdown(session.id)
     services.workspace.delete_session(session.id)
 

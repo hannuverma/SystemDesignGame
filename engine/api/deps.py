@@ -13,10 +13,14 @@ from engine.config import Settings
 from engine.deploy import Deployer
 from engine.events.bus import EventBus
 from engine.events.stats import StatsCollector
+from engine.flaws.loader import load_all_flaws
 from engine.gateway.app import create_gateway_app
 from engine.gateway.proxy import RouteResolver, TargetResolver
 from engine.gateway.routes import RouteMatcher
 from engine.gateway.server import GatewayServer
+from engine.levels.loader import load_all_levels
+from engine.levels.runner import LevelRunner
+from engine.manifest import load_manifest
 from engine.runtime import ProcessRuntime, Runtime
 from engine.verify.attacks import AttackManager
 from engine.workspace import Session, WorkspaceManager
@@ -67,6 +71,7 @@ class Services:
     gateway: GatewayServer
     probe_token: str
     attacks: AttackManager
+    levels_runner: LevelRunner
 
 
 def build_services(
@@ -101,6 +106,30 @@ def build_services(
         port=settings.gateway_port,
     )
     attacks = AttackManager()
+    company_dir = settings.content_dir / "companies" / "starter"
+    manifest = (
+        load_manifest(company_dir) if (company_dir / "company.yaml").is_file() else None
+    )
+    flaws = (
+        load_all_flaws(settings.content_dir / "flaws", manifest, company_dir)
+        if manifest
+        else {}
+    )
+    levels = load_all_levels(
+        settings.content_dir / "levels",
+        flaws=flaws,
+        companies_dir=settings.content_dir / "companies",
+    )
+    levels_runner = LevelRunner(
+        flaws=flaws,
+        levels=levels,
+        gateway_url_fn=lambda sid: f"{gateway.url}/{sid}",
+        probe_token=probe_token,
+        bus=bus,
+        reset_fn=lambda s: deployer.reset_company_state(s),
+    )
+    deployer.set_post_deploy_hook(levels_runner.on_post_deploy_hook)
+
     return Services(
         settings=settings,
         workspace=workspace,
@@ -113,6 +142,7 @@ def build_services(
         gateway=gateway,
         probe_token=probe_token,
         attacks=attacks,
+        levels_runner=levels_runner,
     )
 
 

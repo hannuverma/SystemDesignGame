@@ -47,6 +47,14 @@ class FlawNotFound(FlawError):
     """No flaw with the given ID was found."""
 
 
+class LevelError(GameError):
+    """A level specification is missing, malformed or invalid."""
+
+
+class LevelNotFound(LevelError):
+    """No level with the given ID was found."""
+
+
 class AttackConflict(GameError):
     """An attack is already actively running for this session."""
 

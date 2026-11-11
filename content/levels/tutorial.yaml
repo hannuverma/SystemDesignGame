@@ -1,0 +1,42 @@
+id: tutorial
+company: starter
+difficulty: guided
+fail_mode: warn
+attack_delay_s: 2.0
+wave_interval_s: 10.0
+objectives:
+  - id: obj_rate_limit
+    flaw: brute_force_login
+    title: "Stop Brute-Force Attacks on Login"
+    text:
+      guided: "Attackers are flooding /login with dictionary passwords. Implement rate limiting in check_login_rate."
+      easy: "Abnormal surge in failed login attempts. Secure the /login endpoint against high-frequency requests."
+      normal: "Endpoint stress detected on authentication."
+      hard: ""
+    requires: []
+    reward: 100
+
+  - id: obj_sql_injection
+    flaw: sql_injection_search
+    title: "Prevent SQL Injection in Item Search"
+    text:
+      guided: "Item search executes unescaped string-formatted SQL. Use parameter binding in execute_search."
+      easy: "Sensitive user data is leaking through /search. Fix the search query."
+      normal: "Database data exfiltration detected."
+      hard: ""
+    requires:
+      - obj_rate_limit
+    reward: 150
+
+  - id: obj_missing_ownership
+    flaw: missing_ownership_delete
+    title: "Fix Authorization on Item Deletion"
+    text:
+      guided: "The delete_item endpoint does not verify item ownership. Check item owner in check_item_ownership."
+      easy: "Users report items being deleted by other accounts. Ensure users only delete their own items."
+      normal: "Unauthorized data destruction reported."
+      hard: ""
+    requires:
+      - obj_sql_injection
+    reward: 200
+
