@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from engine.bots.models import BotResult
+from engine.flaws.models import BudgetConfig
+from engine.verify.attacks import AttackRecord, AttackStatus
+from engine.verify.contract import ContractResult
+from engine.verify.verdict import Verdict
 from engine.workspace import Stage
 
 
@@ -42,3 +47,44 @@ class StageDetail(StageSummary):
 
 class StageUpdate(BaseModel):
     code: str = Field(max_length=200_000)
+
+
+class StartAttackRequest(BaseModel):
+    flaw_id: str
+    seed: int = 42
+    budget: BudgetConfig | None = None
+    wait: bool = False
+
+
+class ReplayAttackRequest(BaseModel):
+    wait: bool = False
+
+
+class AttackOut(BaseModel):
+    id: str
+    session_id: str
+    flaw_id: str
+    seed: int
+    status: AttackStatus
+    budget: BudgetConfig
+    verdict: Verdict | None = None
+    bot_result: BotResult | None = None
+    contract_result: ContractResult | None = None
+    created_at: float
+    completed_at: float | None = None
+
+    @classmethod
+    def of(cls, rec: AttackRecord) -> AttackOut:
+        return cls(
+            id=rec.id,
+            session_id=rec.session_id,
+            flaw_id=rec.flaw_id,
+            seed=rec.seed,
+            status=rec.status,
+            budget=rec.budget,
+            verdict=rec.verdict,
+            bot_result=rec.bot_result,
+            contract_result=rec.contract_result,
+            created_at=rec.created_at,
+            completed_at=rec.completed_at,
+        )

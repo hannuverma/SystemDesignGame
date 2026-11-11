@@ -43,6 +43,18 @@ class FlawError(GameError):
     """A flaw module is missing, malformed or references invalid stages."""
 
 
+class FlawNotFound(FlawError):
+    """No flaw with the given ID was found."""
+
+
+class AttackConflict(GameError):
+    """An attack is already actively running for this session."""
+
+
+class AttackNotFound(GameError):
+    """No attack run with the given ID was found."""
+
+
 class RuntimeStartError(GameError):
     """The company process could not be started or did not become healthy."""
 

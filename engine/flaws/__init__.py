@@ -9,4 +9,3 @@ __all__ = [
     "load_all_flaws",
     "load_flaw",
 ]
-

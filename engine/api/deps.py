@@ -18,6 +18,7 @@ from engine.gateway.proxy import RouteResolver, TargetResolver
 from engine.gateway.routes import RouteMatcher
 from engine.gateway.server import GatewayServer
 from engine.runtime import ProcessRuntime, Runtime
+from engine.verify.attacks import AttackManager
 from engine.workspace import Session, WorkspaceManager
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ class Services:
     route_resolver: RouteResolver
     gateway: GatewayServer
     probe_token: str
+    attacks: AttackManager
 
 
 def build_services(
@@ -98,6 +100,7 @@ def build_services(
         host="127.0.0.1",
         port=settings.gateway_port,
     )
+    attacks = AttackManager()
     return Services(
         settings=settings,
         workspace=workspace,
@@ -109,6 +112,7 @@ def build_services(
         route_resolver=route_resolver,
         gateway=gateway,
         probe_token=probe_token,
+        attacks=attacks,
     )
 
 

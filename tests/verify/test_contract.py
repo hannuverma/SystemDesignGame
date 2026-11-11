@@ -147,4 +147,3 @@ def test_contract_against_live_starter(settings) -> None:
 
     time.sleep(0.2)
     assert not pid_alive(pid)
-
