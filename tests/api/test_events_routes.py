@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from engine.api.app import create_app
-from engine.events.models import DeployEvent, RequestEvent
+from engine.events.models import DeployEvent, EconomyUpdate, RequestEvent, SecurityEvent
 from starlette.testclient import TestClient
 
 from tests.fakes import FakeRuntime
@@ -81,3 +81,34 @@ def test_websocket_stream_events(client, sid):
         msg2 = ws.receive_json()
         assert msg2["type"] == "deploy"
         assert msg2["data"]["phase"] == "finished"
+
+        # Publish EconomyUpdate
+        econ_event = EconomyUpdate(
+            session_id=sid,
+            ts=102.0,
+            balance=1005.0,
+            total_revenue=5.0,
+            total_penalties=0.0,
+            total_fines=0.0,
+            leaked_records=0,
+            uptime_percentage=100.0,
+        )
+        services.bus.publish(sid, econ_event)
+        msg3 = ws.receive_json()
+        assert msg3["type"] == "economy"
+        assert msg3["data"]["balance"] == 1005.0
+
+        # Publish SecurityEvent
+        sec_event = SecurityEvent(
+            session_id=sid,
+            ts=103.0,
+            flaw_id="sqli",
+            records_leaked=2,
+            records_destroyed=0,
+            accounts_compromised=0,
+            evidence=["token_123"],
+        )
+        services.bus.publish(sid, sec_event)
+        msg4 = ws.receive_json()
+        assert msg4["type"] == "security"
+        assert msg4["data"]["records_leaked"] == 2

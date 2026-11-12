@@ -58,6 +58,7 @@ def get_session_history(
 @router.delete("/{session_id}", status_code=204)
 def delete_session(session: SessionDep, services: ServicesDep):
     services.levels_runner.stop_session(session.id)
+    services.economy.drop_session(session.id)
     services.deployer.shutdown(session.id)
     services.workspace.delete_session(session.id)
 
@@ -73,5 +74,6 @@ def logs(
 
 @router.post("/{session_id}/reset")
 def reset(session: SessionDep, services: ServicesDep):
+    services.economy.reset_session(session.id)
     result = services.deployer.reset(session)
     return JSONResponse(result.to_dict(), status_code=HTTP_STATUS[result.status])

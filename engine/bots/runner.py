@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from engine.bots.models import BotProgress, BotReport, BotResult, BotSpec
-from engine.events.models import DeployEvent
+from engine.events.models import DeployEvent, SecurityEvent
 
 if TYPE_CHECKING:
     from engine.events.bus import EventBus
@@ -201,6 +201,26 @@ def run_bot(
 
     # Publish finished event
     if bus and session_id:
+        if report and report.succeeded and report.impact:
+            impact = report.impact
+            if (
+                impact.records_leaked > 0
+                or impact.records_destroyed > 0
+                or impact.accounts_compromised > 0
+            ):
+                bus.publish(
+                    session_id,
+                    SecurityEvent(
+                        session_id=session_id,
+                        ts=time.time(),
+                        flaw_id=spec.id,
+                        records_leaked=impact.records_leaked,
+                        records_destroyed=impact.records_destroyed,
+                        accounts_compromised=impact.accounts_compromised,
+                        evidence=list(report.evidence),
+                    ),
+                )
+
         bus.publish(
             session_id,
             DeployEvent(

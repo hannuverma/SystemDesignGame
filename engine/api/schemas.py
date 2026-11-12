@@ -91,3 +91,14 @@ class AttackOut(BaseModel):
             created_at=rec.created_at,
             completed_at=rec.completed_at,
         )
+
+
+class EconomyOut(BaseModel):
+    session_id: str
+    balance: float
+    total_revenue: float
+    total_penalties: float
+    total_fines: float
+    leaked_records: int
+    uptime_percentage: float
+    updated_at: float

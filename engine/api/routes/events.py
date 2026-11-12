@@ -7,7 +7,13 @@ from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from engine.api.deps import ServicesDep, SessionDep
 from engine.events.bus import SubscriptionClosed
-from engine.events.models import DeployEvent, RequestEvent, StatsSnapshot
+from engine.events.models import (
+    DeployEvent,
+    EconomyUpdate,
+    RequestEvent,
+    SecurityEvent,
+    StatsSnapshot,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +27,10 @@ def _serialize_event(event: Any) -> dict[str, Any]:
         return {"type": "deploy", "data": event.to_dict()}
     if isinstance(event, StatsSnapshot):
         return {"type": "stats", "data": event.to_dict()}
+    if isinstance(event, EconomyUpdate):
+        return {"type": "economy", "data": event.to_dict()}
+    if isinstance(event, SecurityEvent):
+        return {"type": "security", "data": event.to_dict()}
     if hasattr(event, "to_dict"):
         return {"type": "custom", "data": event.to_dict()}
     return {"type": "custom", "data": event}

@@ -137,6 +137,8 @@ class EventBus:
         try:
             with self._lock:
                 subs = list(self._subs.get(session_id, ()))
+                if "*" in self._subs and session_id != "*":
+                    subs.extend(self._subs["*"])
 
             for sub in subs:
                 try:

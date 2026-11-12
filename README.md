@@ -3,7 +3,7 @@
 Defend a company from bots by editing its real code.
 
 ## Layout
-- `engine/`   game core (api, workspace, runtime, deploy, gateway, events, flaws, bots, verify, selftest, levels)
+- `engine/`   game core (api, workspace, runtime, deploy, gateway, events, flaws, bots, verify, selftest, levels, economy)
 - `content/`  data, not engine code (companies, flaws, levels)
 - `web/`      dashboard + stage editor
 - `runs/`     gitignored: one workspace per game session
@@ -27,9 +27,17 @@ Principle: the engine is generic; content is data. The engine never hardcodes fl
   - Background wave runner, progression engine, and automatic regression detection.
   - Post-deploy contract validation with `fail_mode: warn` and one-click undo (`POST /undo`).
   - Four difficulty tiers (`guided`, `easy`, `normal`, `hard`) controlling symptom visibility vs root causes.
+- **Phase 4: Economy & Consequences**:
+  - Financial stake engine translating ground-truth telemetry and exploit reports into economic outcomes.
+  - Revenue for legitimate `200 OK` traffic (+$0.01 per 2xx).
+  - Downtime penalties for `5xx` and unavailable responses (-$1.00 per failure) with SLA uptime percentage tracking.
+  - Regulatory breach fines for data theft reported by attack bots (-$500.00 per leaked record).
+  - REST endpoint `GET /sessions/{id}/economy` and live `EconomyUpdate` / `SecurityEvent` WebSocket broadcasts (`/events/live`).
 
 ## Milestones
 - `python scripts/milestone_c.py` — runs end-to-end flaw detection, patching, replay, and contract verification.
 - `python scripts/milestone_3b.py` — runs end-to-end 3-objective level progression, fail warnings, undo, regression guard, and difficulty visibility.
+- `python scripts/milestone_d.py` — runs end-to-end revenue generation, downtime penalties, data breach fines, and live economy streaming.
 - `python -m engine.selftest` — verifies baseline, reference fix, and broken fix across all flaws.
+
 

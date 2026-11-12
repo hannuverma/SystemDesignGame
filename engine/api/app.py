@@ -10,7 +10,15 @@ from fastapi.responses import JSONResponse
 
 from engine import errors
 from engine.api.deps import build_services
-from engine.api.routes import attacks, deploys, events, levels, sessions, stages
+from engine.api.routes import (
+    attacks,
+    deploys,
+    economy,
+    events,
+    levels,
+    sessions,
+    stages,
+)
 from engine.config import Settings
 from engine.runtime import Runtime
 
@@ -43,6 +51,7 @@ def create_app(
 
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         services.gateway.start()
+        services.economy.start()
         ticker_task = asyncio.create_task(
             services.stats.run_ticker(services.bus, interval_s=1.0)
         )
@@ -52,6 +61,7 @@ def create_app(
             ticker_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await ticker_task
+            await services.economy.astop()
             services.gateway.stop()
             services.deployer.shutdown_all()  # never leave company processes behind
 
@@ -74,4 +84,5 @@ def create_app(
     app.include_router(events.router)
     app.include_router(attacks.router)
     app.include_router(levels.router)
+    app.include_router(economy.router)
     return app

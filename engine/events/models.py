@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 RequestOutcome = Literal["ok", "upstream_unavailable", "timeout", "error"]
@@ -92,6 +92,39 @@ class DeployEvent:
             raise ValueError(
                 f"Invalid phase: {self.phase!r}. Must be one of {sorted(VALID_DEPLOY_PHASES)}"
             )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class SecurityEvent:
+    session_id: str
+    ts: float
+    flaw_id: str
+    records_leaked: int = 0
+    records_destroyed: int = 0
+    accounts_compromised: int = 0
+    evidence: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+# Alias for backward compatibility / explicit terminology
+LeakEvent = SecurityEvent
+
+
+@dataclass(frozen=True)
+class EconomyUpdate:
+    session_id: str
+    ts: float
+    balance: float
+    total_revenue: float
+    total_penalties: float
+    total_fines: float
+    leaked_records: int
+    uptime_percentage: float
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

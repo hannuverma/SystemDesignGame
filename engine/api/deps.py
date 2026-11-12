@@ -11,6 +11,7 @@ from starlette.requests import HTTPConnection
 
 from engine.config import Settings
 from engine.deploy import Deployer
+from engine.economy.manager import EconomyManager
 from engine.events.bus import EventBus
 from engine.events.stats import StatsCollector
 from engine.flaws.loader import load_all_flaws
@@ -72,6 +73,7 @@ class Services:
     probe_token: str
     attacks: AttackManager
     levels_runner: LevelRunner
+    economy: EconomyManager
 
 
 def build_services(
@@ -129,6 +131,7 @@ def build_services(
         reset_fn=lambda s: deployer.reset_company_state(s),
     )
     deployer.set_post_deploy_hook(levels_runner.on_post_deploy_hook)
+    economy = EconomyManager(bus=bus)
 
     return Services(
         settings=settings,
@@ -143,6 +146,7 @@ def build_services(
         probe_token=probe_token,
         attacks=attacks,
         levels_runner=levels_runner,
+        economy=economy,
     )
 
 
