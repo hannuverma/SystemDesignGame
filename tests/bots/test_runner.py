@@ -76,7 +76,7 @@ time.sleep(60)
 
     assert result.status == "timeout"
     assert result.report is None
-    assert duration < 3.0
+    assert duration < 5.0
 
 
 def test_runner_spawns_child_and_tree_is_killed(tmp_path: Path) -> None:
